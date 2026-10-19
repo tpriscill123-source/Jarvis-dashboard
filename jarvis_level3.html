@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J.A.R.V.I.S. — Flight Deck</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #050b14; --panel: rgba(8, 22, 38, .88);
+    --line: rgba(74, 204, 255, .35); --cyan: #55dfff;
+    --blue: #4794ff; --muted: #8da9bd; --white: #e8f8ff;
+    --green: #72ffc4; --amber: #ffd27a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--white);
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(19, 92, 145, .28), transparent 48%),
+      linear-gradient(rgba(45, 126, 167, .055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45, 126, 167, .055) 1px, transparent 1px), var(--bg);
+    background-size: auto, 34px 34px, 34px 34px, auto;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  .wrap { max-width: 1100px; margin: auto; padding: 22px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:16px; }
+  .eyebrow { color:var(--cyan); font-size:.75rem; letter-spacing:.2em; }
+  h1 { margin:5px 0 0; font-size:clamp(1.45rem, 4vw, 2.5rem); letter-spacing:.12em; font-weight:700; }
+  .status { border:1px solid var(--line); border-radius:999px; padding:9px 12px; color:var(--green); font-size:.8rem; }
+  .status::before { content:""; display:inline-block; width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:8px;box-shadow:0 0 10px currentColor; }
+  .top-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:16px; margin-top:18px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:0 0 28px rgba(0,170,255,.055), inset 0 0 20px rgba(0,170,255,.025); }
+  .panel-title { color:var(--cyan); font-size:.75rem; letter-spacing:.16em; margin:0 0 16px; }
+  .clock { font-size:clamp(2rem, 7vw, 4.1rem); letter-spacing:.05em; font-weight:700; }
+  .date { color:var(--muted); margin-top:6px; }
+  .readouts { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:20px; }
+  .readout { border-top:1px solid var(--line); padding-top:10px; }
+  .readout small { display:block;color:var(--muted);font-size:.68rem;letter-spacing:.1em; }
+  .readout strong { display:block;margin-top:7px;font-size:.9rem;color:var(--green); }
+  .core-area { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:280px; }
+  .core { width:158px;height:158px;border-radius:50%;display:grid;place-items:center;position:relative;border:1px solid var(--cyan); box-shadow:0 0 22px rgba(85,223,255,.2), inset 0 0 25px rgba(85,223,255,.1); }
+  .core::before,.core::after { content:"";position:absolute;border-radius:50%;border:1px dashed rgba(85,223,255,.6);inset:10px; }
+  .core::after { inset:-10px;border-style:solid;border-color:rgba(71,148,255,.3); }
+  .core-icon { font-size:2.4rem;color:var(--cyan);text-shadow:0 0 18px var(--cyan); }
+  .core.listening { animation:pulse 1.4s ease-in-out infinite; }
+  .core.listening::before { animation:spin 7s linear infinite; }
+  .core.listening .core-icon { animation:glow .8s ease-in-out infinite alternate; }
+  @keyframes pulse { 50% { box-shadow:0 0 42px rgba(85,223,255,.48), inset 0 0 35px rgba(85,223,255,.2); } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes glow { to { opacity:.45; } }
+  .core-caption { color:var(--muted);font-size:.72rem;letter-spacing:.15em;margin-top:25px;text-align:center; }
+  .controls { display:flex;flex-wrap:wrap;gap:10px;margin-top:16px; }
+  button { border:1px solid var(--cyan);background:rgba(17,75,105,.45);color:var(--white);border-radius:8px;padding:12px 15px;font:inherit;font-size:.82rem;cursor:pointer; }
+  button:hover { background:rgba(34,130,170,.4); }
+  button.primary { background:var(--cyan);color:#03101b;font-weight:800; }
+  button.stop { border-color:#ff8b8b;color:#ffb2b2; }
+  button:focus-visible,input:focus-visible { outline:2px solid white;outline-offset:3px; }
+  .voice-panel { margin-top:16px; }
+  .transcript { min-height:50px;border:1px solid rgba(74,204,255,.2);background:rgba(0,0,0,.18);border-radius:8px;padding:12px;color:#d9f7ff;line-height:1.5;overflow-wrap:anywhere; }
+  .label { display:block;color:var(--muted);font-size:.72rem;letter-spacing:.12em;margin:14px 0 8px; }
+  .entry { display:flex;gap:8px; }
+  input { width:100%;min-width:0;background:#071522;color:var(--white);border:1px solid var(--line);border-radius:8px;padding:13px;font:inherit; }
+  .reply { min-height:64px;line-height:1.6; }
+  .note { color:var(--muted);font-size:.78rem;line-height:1.65;margin-top:14px; }
+  .warning { color:var(--amber); }
+  footer { color:#68869a;text-align:center;font-size:.68rem;letter-spacing:.1em;padding:20px 0 4px; }
+  @media(max-width:720px) { .top-grid{grid-template-columns:1fr}.core-area{min-height:250px}.wrap{padding:14px}.readouts{gap:5px}.readout small{font-size:.6rem} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">PERSONAL ASSISTANT // FLIGHT DECK</div>
+      <h1>J.A.R.V.I.S.</h1>
+    </div>
+    <div class="status" id="systemStatus">SYSTEM STANDBY</div>
+  </header>
+
+  <main>
+    <div class="top-grid">
+      <section class="panel">
+        <h2 class="panel-title">LOCAL SYSTEM TIME</h2>
+        <div class="clock" id="clock">--:--:--</div>
+        <div class="date" id="date">Synchronizing date…</div>
+        <div class="readouts">
+          <div class="readout"><small>VOICE LINK</small><strong id="voiceState">OFFLINE</strong></div>
+          <div class="readout"><small>AI CONNECTION</small><strong>NOT LINKED</strong></div>
+          <div class="readout"><small>MODE</small><strong>LOCAL DEMO</strong></div>
+        </div>
+      </section>
+
+      <section class="panel core-area">
+        <h2 class="panel-title">ASSISTANT CORE</h2>
+        <div class="core" id="core" aria-label="Assistant visualizer">
+          <div class="core-icon">✦</div>
+        </div>
+        <div class="core-caption" id="coreCaption">AWAITING ACTIVATION</div>
+      </section>
+    </div>
+
+    <section class="panel voice-panel">
+      <h2 class="panel-title">VOICE INTERFACE</h2>
+      <div class="controls">
+        <button class="primary" id="startBtn">ACTIVATE VOICE</button>
+        <button class="stop" id="stopBtn">STOP LISTENING</button>
+        <button id="testVoiceBtn">TEST SPEAKER</button>
+        <button id="clearBtn">CLEAR LOG</button>
+      </div>
+      <span class="label">LATEST RECOGNIZED SPEECH</span>
+      <div class="transcript" id="transcript" aria-live="polite">Voice input will appear here when supported by your browser.</div>
+      <span class="label" for="commandInput">TEXT COMMAND</span>
+      <form class="entry" id="commandForm">
+        <input id="commandInput" autocomplete="off" placeholder="Type a command or question…" aria-label="Type a command or question">
+        <button class="primary" type="submit">SEND</button>
+      </form>
+      <span class="label">J.A.R.V.I.S. RESPONSE</span>
+      <div class="transcript reply" id="reply" aria-live="polite">Systems online. My AI brain is not connected yet, but I can respond to a few built-in demo commands.</div>
+      <p class="note"><strong>Privacy:</strong> Voice recognition may use an online browser service. Activate it only when you're ready to speak; use STOP LISTENING when finished. The browser may ask for microphone permission.</p>
+      <p class="note warning" id="supportNote">Speech recognition support will be checked when you activate the microphone.</p>
+    </section>
+
+    <section class="panel" style="margin-top:16px">
+      <h2 class="panel-title">AVAILABLE DEMO COMMANDS</h2>
+      <div class="note">
+        Try saying or typing: <strong>“What time is it?”</strong>, <strong>“What is your status?”</strong>, <strong>“Help”</strong>, or <strong>“Introduce yourself.”</strong><br>
+        Other questions will receive an honest notice that the AI brain is not connected. This version does not control apps, files, or smart-home devices.
+      </div>
+    </section>
+  </main>
+  <footer>FLIGHT DECK V1.0 // BUILT FOR YOUR LOCAL BROWSER</footer>
+</div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const clock = $('clock'), date = $('date'), status = $('systemStatus');
+  const voiceState = $('voiceState'), core = $('core'), caption = $('coreCaption');
+  const transcript = $('transcript'), reply = $('reply'), supportNote = $('supportNote');
+  let recognition = null, listening = false, shouldRestart = false, restartTimer = null;
+
+  function updateClock() {
+    const now = new Date();
+    clock.textContent = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    date.textContent = now.toLocaleDateString([], {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  function setListeningVisual(on) {
+    core.classList.toggle('listening', on);
+    voiceState.textContent = on ? 'LISTENING' : 'OFFLINE';
+    caption.textContent = on ? 'VOICE LINK ACTIVE // LISTENING' : 'AWAITING ACTIVATION';
+    status.textContent = on ? 'VOICE LINK ACTIVE' : 'SYSTEM STANDBY';
+    status.style.color = on ? 'var(--green)' : 'var(--muted)';
+  }
+
+  function speak(text) {
+    if (!('speechSynthesis' in window)) {
+      reply.textContent = text + ' (Text-to-speech is not supported in this browser.)';
+      return;
+    }
+    window.speechSynthesis.cancel();
+    reply.textContent = text;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.96;
+    utterance.pitch = 0.88;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function respond(raw) {
+    const command = raw.toLowerCase().trim().replace(/[.!?]+$/g, '');
+    let answer;
+    if (!command) return;
+    if (/\b(hello|hi|hey)\b/.test(command)) {
+      answer = 'Hello. JARVIS flight deck is online. My AI brain is not connected yet.';
+    } else if (command.includes('time')) {
+      answer = 'The local time is ' + new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}) + '.';
+    } else if (command.includes('date') || command.includes('day is it')) {
+      answer = 'Today is ' + new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric', year:'numeric'}) + '.';
+    } else if (command.includes('status') || command.includes('systems')) {
+      answer = 'Dashboard operational. Clock online. Speech features depend on browser support. AI connection is not linked.';
+    } else if (command.includes('introduce') || command.includes('who are you')) {
+      answer = 'I am your JARVIS-style assistant prototype. I can speak, display recognized words, tell the time, and answer a few demo commands. I do not have a connected AI brain yet.';
+    } else if (command === 'help' || command.includes('what can you do')) {
+      answer = 'Try asking for the time, the date, my status, or an introduction. For open-ended questions, we will need to connect an AI service in a later version.';
+    } else {
+      answer = 'I heard you say: ' + raw + '. I cannot answer that yet because my AI brain is not connected. This is version one.';
+    }
+    speak(answer);
+  }
+
+  function stopRecognition() {
+    shouldRestart = false;
+    listening = false;
+    if (restartTimer) { clearTimeout(restartTimer); restartTimer = null; }
+    if (recognition) {
+      try { recognition.stop(); } catch (e) {}
+    }
+    setListeningVisual(false);
+  }
+
+  function startRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      supportNote.textContent = 'Speech recognition is not available in this browser. Try the latest Chrome version; text commands and the speaker test may still work.';
+      supportNote.classList.add('warning');
+      speak('Speech recognition is not available in this browser. You can still type commands.');
+      return;
+    }
+    if (!recognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.onstart = () => {
+        listening = true;
+        setListeningVisual(true);
+        supportNote.textContent = 'Microphone active. Recognition support and behavior depend on your browser and network.';
+      };
+      recognition.onresult = event => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const phrase = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            transcript.textContent = phrase;
+            respond(phrase);
+          } else {
+            interim += phrase;
+            transcript.textContent = interim + ' …';
+          }
+        }
+      };
+      recognition.onerror = event => {
+        supportNote.textContent = 'Voice recognition notice: ' + event.error + '. You can still type commands.';
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          shouldRestart = false;
+          listening = false;
+          setListeningVisual(false);
+        }
+      };
+      recognition.onend = () => {
+        if (shouldRestart) {
+          restartTimer = setTimeout(() => {
+            if (!shouldRestart) return;
+            try { recognition.start(); } catch (e) { /* browser may still be restarting */ }
+          }, 650);
+        } else {
+          listening = false;
+          setListeningVisual(false);
+        }
+      };
+    }
+    if (listening) return;
+    shouldRestart = true;
+    try { recognition.start(); }
+    catch (e) {
+      supportNote.textContent = 'The microphone could not start. Wait a moment, check site permissions, and try again.';
+    }
+  }
+
+  $('startBtn').addEventListener('click', startRecognition);
+  $('stopBtn').addEventListener('click', stopRecognition);
+  $('testVoiceBtn').addEventListener('click', () => speak('Audio test successful. JARVIS speaker is ready.'));
+  $('clearBtn').addEventListener('click', () => {
+    transcript.textContent = 'Log cleared.';
+    reply.textContent = 'Ready for your next command.';
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  });
+  $('commandForm').addEventListener('submit', event => {
+    event.preventDefault();
+    const value = $('commandInput').value.trim();
+    if (!value) return;
+    transcript.textContent = value;
+    $('commandInput').value = '';
+    respond(value);
+  });
+  window.addEventListener('beforeunload', () => {
+    shouldRestart = false;
+    if (recognition) try { recognition.stop(); } catch(e) {}
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  });
+})();
+</script>
+</body>
+</html>
